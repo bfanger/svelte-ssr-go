@@ -1,0 +1,18 @@
+{
+  "name": "go-svelte",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "scripts": {
+    "dev": "find . | entr -r go run cmd/poc/poc.go",
+    "build": "node src/build.cjs",
+    "lint": "eslint src --max-warnings 0 --ext .ts,.js"
+  },
+  "dependencies": {
+    "esbuild": "^0.12.15",
+    "eslint": "^7.30.0",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-plugin-prettier": "^3.4.0",
+    "svelte": "^3.38.3"
+  }
+}
