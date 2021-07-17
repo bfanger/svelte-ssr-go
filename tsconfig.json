@@ -3,5 +3,9 @@
     "allowJs": true,
     "noEmit": true
   },
-  "include": ["src"]
+  "include": ["example/src"],
+  "paths": {
+    "$lib": ["example/src/lib"],
+    "$lib/*": ["example/src/lib/*"]
+  }
 }

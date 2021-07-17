@@ -3,6 +3,8 @@ const path = require("path");
 const esbuild = require("esbuild");
 const sveltePlugin = require("esbuild-svelte");
 const sassPlugin = require("esbuild-plugin-sass");
+const aliasPlugin = require("esbuild-plugin-alias");
+const preprocess = require("svelte-preprocess");
 
 module.exports = async function processComponent(filename) {
   const folder = "routes";
@@ -28,8 +30,12 @@ module.exports = async function processComponent(filename) {
     format: "esm",
     outfile: targetFile,
     plugins: [
+      aliasPlugin({
+        $lib: path.resolve(__dirname, "../example/src/lib"),
+      }),
       sassPlugin(),
       sveltePlugin({
+        preprocess: preprocess(),
         compileOptions: {
           generate: "ssr",
           sourcemap: false,

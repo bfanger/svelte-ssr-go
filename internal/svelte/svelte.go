@@ -6,10 +6,9 @@ import (
 	"github.com/bfanger/svelte-ssr-go/internal/javascript"
 )
 
-func NewHandler(filename string, debug bool) http.Handler {
-	js, err := javascript.New() // @todo Reuse a vm?
-	if err != nil {
-		return &ErrorResponse{err: err, debug: debug}
+func NewHandler(js *javascript.Runtime, filename string, debug bool) http.Handler {
+	if debug {
+		return &DebugHandler{js, filename}
 	}
 	r, err := NewRoute(js, filename, debug)
 	if err != nil {
@@ -18,23 +17,17 @@ func NewHandler(filename string, debug bool) http.Handler {
 	return r
 }
 
-// A handeFunc
-// func NewHandlerFuncProduction(filename string) func(http.ResponseWriter, *http.Request) {
+type DebugHandler struct {
+	js       *javascript.Runtime
+	filename string
+}
 
-// 	return func(w http.ResponseWriter, r *http.Request) {
-// 		output, err := c.Handle(w, r)
-// 		if err != nil {
-// 			handleError(w, err, false)
-// 			return
-// 		}
-// 		if css != nil {
-// 			w.Write([]byte("<style>"))
-// 			w.Write(css)
-// 			w.Write([]byte("</style>"))
-// 		}
-// 		// return fmt.Sprintf("\n<style>%s</style>\n%s\n", r.Css, r.Html)
-
-// 		w.Write([]byte(output.Head))
-// 		w.Write(output.Bytes())
-// 	}
-// }
+func (h *DebugHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	// Create a new route of every request (reloads all scripts)
+	r, err := NewRoute(h.js, h.filename, true)
+	if err != nil {
+		writeError(w, err, true)
+		return
+	}
+	r.ServeHTTP(w, req)
+}

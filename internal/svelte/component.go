@@ -46,8 +46,8 @@ type Result struct {
 	Css  string
 }
 
-func (c Component) Render() (*Result, error) {
-	result, err := c.render.Call()
+func (c Component) Render(args ...v8go.Valuer) (*Result, error) {
+	result, err := c.render.Call(args...)
 	if err != nil {
 		return nil, err
 	}

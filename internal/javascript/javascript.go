@@ -9,9 +9,10 @@ import (
 )
 
 type Runtime struct {
-	Isolate *v8go.Isolate
-	Global  *v8go.ObjectTemplate
-	Context *v8go.Context
+	Isolate     *v8go.Isolate
+	Global      *v8go.ObjectTemplate
+	Context     *v8go.Context
+	EmptyObject *v8go.Object
 }
 
 func New() (*Runtime, error) {
@@ -29,8 +30,14 @@ func New() (*Runtime, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "creating context failed")
 	}
-	// @todo one context per page?
-	return &Runtime{Isolate: iso, Global: global, Context: ctx}, nil
+	// @todo multiple contexts?
+	empty, err := ctx.RunScript("(function () { return {} })();", "javascript.go")
+	if err != nil {
+		return nil, errors.Wrap(err, "creating empty object failed")
+	}
+	emptyObj, err := empty.AsObject()
+
+	return &Runtime{Isolate: iso, Global: global, Context: ctx, EmptyObject: emptyObj}, nil
 }
 
 func (r *Runtime) Close() {

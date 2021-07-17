@@ -1,72 +1,108 @@
 package svelte
 
 import (
+	"log"
 	"net/http"
 	"os"
 	"regexp"
 	"text/template"
 
 	"github.com/bfanger/svelte-ssr-go/internal/javascript"
+	"rogchap.com/v8go"
 )
 
 type Route struct {
-	js        *javascript.Runtime
-	filename  string
-	debug     bool // Reload component & app.html on every request + render error
-	InlineCss string
-	Template  *template.Template
-	Component *Component
+	js            *javascript.Runtime
+	debug         bool
+	InlineCss     string
+	Template      *template.Template
+	Component     *Component
+	Layout        *Component
+	LayoutOptions *v8go.Object
 }
 
 func NewRoute(js *javascript.Runtime, filename string, debug bool) (*Route, error) {
-	r := &Route{js: js, filename: filename, debug: debug}
-	if debug == false {
-		if err := r.Reload(); err != nil {
+	r := &Route{js: js, debug: debug}
+	var err error
+	r.Component, err = NewComponent(js, filename)
+	if err != nil {
+		return nil, err
+	}
+	layoutPath := regexp.MustCompile("[^/]+$").ReplaceAllString(filename, "__layout.js")
+	stat, _ := os.Stat(layoutPath)
+	if stat == nil {
+		r.Layout = nil
+	} else {
+		r.Layout, err = NewComponent(js, layoutPath)
+		if err != nil {
 			return nil, err
 		}
+		slots, err := r.Component.js.Context.RunScript(`
+(function () {
+	return {
+		$$slots: {
+			default() { return this.__go_Component_render().html; }
+		}
+	}
+})();`, "route.go")
+		r.LayoutOptions, err = slots.AsObject()
+		if err != nil {
+			return nil, err
+		}
+
+		definedSlots, err := javascript.PropAsObject(r.LayoutOptions, "$$slots")
+		if err != nil {
+			return nil, err
+		}
+		definedSlots.Set("__go_Component_render", r.Component.render)
 	}
 
+	r.InlineCss = ""
+	if r.Layout.CssFile != "" {
+		css, err := os.ReadFile(r.Layout.CssFile)
+		if err != nil {
+			return nil, err
+		}
+		// @todo Use external (hashed) url in a <link>?
+		r.InlineCss += "<style>\n" + string(css) + "</style>\n"
+	}
+	if r.Component.CssFile != "" {
+		css, err := os.ReadFile(r.Component.CssFile)
+		if err != nil {
+			return nil, err
+		}
+		// @todo Use external (hashed) url in a <link>?
+		r.InlineCss += "<style>\n" + string(css) + "</style>\n"
+	}
+	r.Template, err = appHtml()
+	if err != nil {
+		return nil, err
+	}
+	log.Printf("Loaded route %s\n", filename)
 	return r, nil
 }
 func (r *Route) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	if r.debug {
-		if err := r.Reload(); err != nil {
+	w.Header().Set("Content-Type", "text/html")
+	var result *Result
+	var err error
+	if r.Layout != nil {
+		result, err = r.Layout.Render(r.js.EmptyObject, r.LayoutOptions)
+		if err != nil {
 			writeError(w, err, r.debug)
 			return
 		}
-	}
-	result, err := r.Component.Render()
-	if err != nil {
-		writeError(w, err, r.debug)
-		return
+	} else {
+		result, err = r.Component.Render()
+		if err != nil {
+			writeError(w, err, r.debug)
+			return
+		}
 	}
 	result.Head += r.InlineCss
 	err = r.Template.Execute(w, result)
 	if err != nil {
 		writeError(w, err, r.debug)
 	}
-}
-
-func (r *Route) Reload() error {
-	var err error
-	r.Component, err = NewComponent(r.js, r.filename)
-	if err != nil {
-		return err
-	}
-	r.InlineCss = ""
-	if r.Component.CssFile != "" {
-		css, err := os.ReadFile(r.Component.CssFile)
-		if err != nil {
-			return err
-		}
-		// @todo Use external (hashed) url in a <link>?
-		r.InlineCss = "<style>" + string(css) + "</style>"
-	}
-	r.Template, err = appHtml()
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func appHtml() (*template.Template, error) {
