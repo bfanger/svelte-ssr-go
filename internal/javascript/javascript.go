@@ -66,56 +66,11 @@ func (r *Runtime) Exec(code string, origin string) (*v8go.Value, error) {
 // 	}
 // 	global.Set("print", printfn)
 
-// 	if err != nil {
-// 		panic(err)
-// 	}
-
-// 	runScript(ctx, "build/pages/index.js")
-// 	val, err := ctx.RunScript(`svelte.render({})`, "main.go")
-// 	if err != nil {
-// 		uncaught(err)
-// 	}
-// 	obj, err := val.AsObject()
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	css, err := obj.Get("css")
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	cssObj, err := css.AsObject()
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	style, err := cssObj.Get("code")
-// 	if err != nil {
-// 		panic(err)
-// 	}
-
-// 	html, err := obj.Get("html")
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	fmt.Printf("\n<style>%s<style>\n%s\n", style, html)
-
-// 	// json, err := v8go.JSONStringify(ctx, val)
-// 	// if err != nil {
-// 	// 	fmt.Printf("Result: %+v\n", val)
-// 	// } else {
-// 	// 	fmt.Printf("Result: %s\n", json)
-// 	// }
-// }
-
-// func readFile(filename string) string {
-// 	f, err := os.Open(filename)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	b, err := io.ReadAll(f)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	return string(b)
+// json, err := v8go.JSONStringify(ctx, val)
+// if err != nil {
+// 	fmt.Printf("Result: %+v\n", val)
+// } else {
+// 	fmt.Printf("Result: %s\n", json)
 // }
 
 // func uncaught(err error) {
@@ -125,19 +80,32 @@ func (r *Runtime) Exec(code string, origin string) (*v8go.Value, error) {
 // 	fmt.Println(e.StackTrace)
 
 // 	log.Fatalf("Uncaught Error: %+v\n", err)
-
-// 	// panic(err)
-// }
-
-// func runScript(ctx *v8go.Context, filename string) *v8go.Value {
-
-// 	val, err := ctx.RunScript(string(b), filename)
-// 	if err != nil {
-// 		uncaught(err)
-// 	}
-// 	return val
 // }
 
 // func consoleLog(message string) {
 // 	log.Println(message)
 // }
+
+func PropAsObject(o *v8go.Object, key string) (*v8go.Object, error) {
+	prop, err := o.Get(key)
+	if err != nil {
+		return nil, err
+	}
+	propObj, err := prop.AsObject()
+	if err != nil {
+		return nil, err
+	}
+	return propObj, nil
+}
+
+func PropAsFunction(o *v8go.Object, key string) (*v8go.Function, error) {
+	prop, err := o.Get(key)
+	if err != nil {
+		return nil, err
+	}
+	fn, err := prop.AsFunction()
+	if err != nil {
+		return nil, err
+	}
+	return fn, nil
+}

@@ -4,15 +4,21 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "dev": "find . | entr -r go run cmd/poc/poc.go",
+    "dev": "find . | entr -r go run cmd/server/server.go",
+    "dev:poc": "find . | entr -r go run cmd/poc/poc.go",
     "build": "node src/build.cjs",
-    "lint": "eslint src --max-warnings 0 --ext .ts,.js"
+    "lint": "eslint src --max-warnings 0 --ext .cjs,.js"
   },
   "dependencies": {
     "esbuild": "^0.12.15",
+    "svelte": "^3.38.3"
+  },
+  "devDependencies": {
+    "esbuild-plugin-sass": "^0.5.2",
+    "esbuild-svelte": "^0.5.3",
     "eslint": "^7.30.0",
     "eslint-config-prettier": "^8.3.0",
     "eslint-plugin-prettier": "^3.4.0",
-    "svelte": "^3.38.3"
+    "prettier": "^2.3.2"
   }
 }

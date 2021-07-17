@@ -13,8 +13,15 @@ yarn build # compiles svelte into js for go
 yarn dev # starts go in watch mode
 ```
 
+# Implemented
+
+- Rendering a SSR component from Go
+
 # Todo
 
+- sveltekit routing
 - sveltekit load
 - polyfills for browser api's
 - polyfill common node modules
+- hydrate
+- build --watch (or vite)

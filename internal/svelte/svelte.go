@@ -1,65 +1,40 @@
 package svelte
 
 import (
-	"fmt"
+	"net/http"
 
 	"github.com/bfanger/svelte-ssr-go/internal/javascript"
-	"rogchap.com/v8go"
 )
 
-type Component struct {
-	Runtime *javascript.Runtime
-	fn      *v8go.Function
+func NewHandler(filename string, debug bool) http.Handler {
+	js, err := javascript.New() // @todo Reuse a vm?
+	if err != nil {
+		return &ErrorResponse{err: err, debug: debug}
+	}
+	r, err := NewRoute(js, filename, debug)
+	if err != nil {
+		return &ErrorResponse{err: err, debug: debug}
+	}
+	return r
 }
 
-func Open(js *javascript.Runtime, filename string) (*Component, error) {
-	val, err := js.ExecFile(filename)
-	if err != nil {
-		return nil, err
-	}
-	obj, err := val.AsObject()
-	if err != nil {
-		return nil, err
-	}
-	render, err := obj.Get("render")
-	if err != nil {
-		return nil, err
-	}
-	fn, err := render.AsFunction()
-	if err != nil {
-		return nil, err
-	}
-	return &Component{Runtime: js, fn: fn}, nil
-}
-func (c Component) Render() (string, error) {
-	result, err := c.fn.Call()
-	if err != nil {
-		return "", err
-	}
-	obj, err := result.AsObject()
-	if err != nil {
-		return "", err
-	}
-	css, err := obj.Get("css")
-	if err != nil {
-		return "", err
-	}
-	cssObj, err := css.AsObject()
-	if err != nil {
-		return "", err
-	}
-	style, err := cssObj.Get("code")
-	if err != nil {
-		return "", err
-	}
+// A handeFunc
+// func NewHandlerFuncProduction(filename string) func(http.ResponseWriter, *http.Request) {
 
-	html, err := obj.Get("html")
-	if err != nil {
-		return "", err
-	}
-	if fmt.Sprint(style) == "" {
-		return html.String(), nil
-	}
-	return fmt.Sprintf("\n<style>%s<style>\n%s\n", style, html), nil
+// 	return func(w http.ResponseWriter, r *http.Request) {
+// 		output, err := c.Handle(w, r)
+// 		if err != nil {
+// 			handleError(w, err, false)
+// 			return
+// 		}
+// 		if css != nil {
+// 			w.Write([]byte("<style>"))
+// 			w.Write(css)
+// 			w.Write([]byte("</style>"))
+// 		}
+// 		// return fmt.Sprintf("\n<style>%s</style>\n%s\n", r.Css, r.Html)
 
-}
+// 		w.Write([]byte(output.Head))
+// 		w.Write(output.Bytes())
+// 	}
+// }
