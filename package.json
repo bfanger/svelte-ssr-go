@@ -4,7 +4,7 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "dev": "find . | entr -r go run cmd/server/server.go",
+    "dev": "find . | entr -r go run cmd/server/server.go -d",
     "dev:poc": "find . | entr -r go run cmd/poc/poc.go",
     "build": "node src/build.cjs",
     "lint": "eslint src --max-warnings 0 --ext .cjs,.js"

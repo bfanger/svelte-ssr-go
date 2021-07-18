@@ -1,7 +1,6 @@
 package svelte
 
 import (
-	"log"
 	"net/http"
 	"os"
 	"regexp"
@@ -78,7 +77,6 @@ func NewRoute(js *javascript.Runtime, filename string, debug bool) (*Route, erro
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("Loaded route %s\n", filename)
 	return r, nil
 }
 func (r *Route) ServeHTTP(w http.ResponseWriter, req *http.Request) {

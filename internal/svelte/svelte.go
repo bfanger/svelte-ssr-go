@@ -6,9 +6,13 @@ import (
 	"github.com/bfanger/svelte-ssr-go/internal/javascript"
 )
 
-func NewHandler(js *javascript.Runtime, filename string, debug bool) http.Handler {
+func NewHandler(filename string, debug bool) http.Handler {
 	if debug {
-		return &DebugHandler{js, filename}
+		return &DebugHandler{filename}
+	}
+	js, err := javascript.New() // @todo Reset isolate after X requests (free memory)
+	if err != nil {
+		return &ErrorResponse{err: err, debug: debug}
 	}
 	r, err := NewRoute(js, filename, debug)
 	if err != nil {
@@ -18,13 +22,19 @@ func NewHandler(js *javascript.Runtime, filename string, debug bool) http.Handle
 }
 
 type DebugHandler struct {
-	js       *javascript.Runtime
 	filename string
 }
 
 func (h *DebugHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	// @todo Reuse an isolate for X requests?
+	js, err := javascript.New()
+	if err != nil {
+		writeError(w, err, true)
+		return
+	}
+	defer js.Dispose()
 	// Create a new route of every request (reloads all scripts)
-	r, err := NewRoute(h.js, h.filename, true)
+	r, err := NewRoute(js, h.filename, true)
 	if err != nil {
 		writeError(w, err, true)
 		return

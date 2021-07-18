@@ -1,7 +1,6 @@
 package javascript
 
 import (
-	"io"
 	"os"
 
 	"github.com/pkg/errors"
@@ -10,7 +9,6 @@ import (
 
 type Runtime struct {
 	Isolate     *v8go.Isolate
-	Global      *v8go.ObjectTemplate
 	Context     *v8go.Context
 	EmptyObject *v8go.Object
 }
@@ -20,36 +18,26 @@ func New() (*Runtime, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "creating isolate failed")
 	}
-	global, err := v8go.NewObjectTemplate(iso)
-	if err != nil {
-		return nil, errors.Wrap(err, "creating global object failed")
-	}
-
-	// @todo Add polyfills into global
-	ctx, err := v8go.NewContext(iso, global)
+	ctx, err := v8go.NewContext(iso)
 	if err != nil {
 		return nil, errors.Wrap(err, "creating context failed")
 	}
-	// @todo multiple contexts?
 	empty, err := ctx.RunScript("(function () { return {} })();", "javascript.go")
 	if err != nil {
 		return nil, errors.Wrap(err, "creating empty object failed")
 	}
 	emptyObj, err := empty.AsObject()
 
-	return &Runtime{Isolate: iso, Global: global, Context: ctx, EmptyObject: emptyObj}, nil
+	return &Runtime{Isolate: iso, Context: ctx, EmptyObject: emptyObj}, nil
 }
 
-func (r *Runtime) Close() {
+func (r *Runtime) Dispose() {
+	r.Context.Close()
 	r.Isolate.Dispose()
 }
 
 func (r *Runtime) ExecFile(filename string) (*v8go.Value, error) {
-	f, err := os.Open(filename)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to open file")
-	}
-	b, err := io.ReadAll(f)
+	b, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to read file")
 	}

@@ -5,19 +5,17 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"runtime"
 
-	"github.com/bfanger/svelte-ssr-go/internal/javascript"
+	"flag"
+
 	"github.com/bfanger/svelte-ssr-go/internal/svelte"
 )
 
 func main() {
-	const debug = true
-	const port = ":8080"
-
-	js, err := javascript.New() // @todo Reuse a vm or use a pool?
-	if err != nil {
-		panic(err)
-	}
+	port := flag.Int("p", 8080, "Port")
+	debug := flag.Bool("d", false, "Debug")
+	flag.Parse()
 
 	fs := http.FileServer(http.Dir("example/static"))
 	dir, err := os.ReadDir("example/static")
@@ -32,21 +30,19 @@ func main() {
 	}
 
 	// @todo crawl routes folder
-	http.Handle("/", svelte.NewHandler(js, "build/routes/index.js", debug))
-	http.Handle("/about", svelte.NewHandler(js, "build/routes/about.js", debug))
+	http.Handle("/", svelte.NewHandler("build/routes/index.js", *debug))
+	http.Handle("/about", svelte.NewHandler("build/routes/about.js", *debug))
 
 	http.HandleFunc("/gc", func(w http.ResponseWriter, r *http.Request) {
-
-		stats := js.Isolate.GetHeapStatistics()
-		fmt.Fprintf(w, "<html><pre style=\"white-space: pre-line;\"'>%+v</pre></html>", stats)
+		runtime.GC()
 	})
 
 	fmt.Print("Svelte ")
-	if debug {
+	if *debug {
 		fmt.Print("debug-")
 	} else {
-		fmt.Print("production-")
+		fmt.Print("performance-")
 	}
-	fmt.Printf("server listening on %s\n", port)
+	fmt.Printf("server listening on %d\n", *port)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
