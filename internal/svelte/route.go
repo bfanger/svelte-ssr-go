@@ -14,6 +14,7 @@ type Route struct {
 	js            *javascript.Runtime
 	debug         bool
 	InlineCss     string
+	InlineScript  string
 	Template      *template.Template
 	Component     *Component
 	Layout        *Component
@@ -27,11 +28,26 @@ func NewRoute(js *javascript.Runtime, filename string, debug bool) (*Route, erro
 	if err != nil {
 		return nil, err
 	}
-	layoutPath := regexp.MustCompile("[^/]+$").ReplaceAllString(filename, "__layout.js")
-	stat, _ := os.Stat(layoutPath)
-	if stat == nil {
-		r.Layout = nil
-	} else {
+	if r.Component.CssFile != "" {
+		// @todo Use external (hashed) url in a <link>?
+		css, err := os.ReadFile(r.Component.CssFile)
+		if err != nil {
+			return nil, err
+		}
+		r.InlineCss = string(css)
+	}
+	if r.Component.JsClientFile != "" {
+		js, err := os.ReadFile(r.Component.JsClientFile)
+		if err != nil {
+			return nil, err
+		}
+		// @todo Use external (hashed) url in a <script src>?
+		r.InlineScript = "var componentModule = " + string(js)
+	}
+
+	layoutPath := regexp.MustCompile("[^/]+$").ReplaceAllString(filename, "__layout")
+	stat, _ := os.Stat(layoutPath + ".server.js")
+	if stat != nil {
 		r.Layout, err = NewComponent(js, layoutPath)
 		if err != nil {
 			return nil, err
@@ -54,25 +70,33 @@ func NewRoute(js *javascript.Runtime, filename string, debug bool) (*Route, erro
 			return nil, err
 		}
 		definedSlots.Set("__go_Component_render", r.Component.render)
+		if r.Layout.CssFile != "" {
+			css, err := os.ReadFile(r.Layout.CssFile)
+			if err != nil {
+				return nil, err
+			}
+			// @todo Use external (hashed) url in a <link>?
+			r.InlineCss += string(css)
+		}
+		if r.Layout.JsClientFile != "" {
+			js, err := os.ReadFile(r.Layout.JsClientFile)
+			if err != nil {
+				return nil, err
+			}
+			// @todo Use external (hashed) url in a <script src>?
+			r.InlineScript += "\nvar layoutModule = " + string(js) + ";"
+			r.InlineScript += `
+var slot = new componentModule.default({});
+var app = new layoutModule.default({ target: document.getElementById("svelte"), hydrate: true, props: {
+  $$scope: {ctx: slot.ctx},
+  $$slots:{ default: [ () => slot.$$.fragment ] },
+}});
+`
+		} else {
+			r.InlineScript += "\nvar app = new componentModule.default({ target: document.getElementById('svelte'), hydrate: true });"
+		}
 	}
 
-	r.InlineCss = ""
-	if r.Layout.CssFile != "" {
-		css, err := os.ReadFile(r.Layout.CssFile)
-		if err != nil {
-			return nil, err
-		}
-		// @todo Use external (hashed) url in a <link>?
-		r.InlineCss += "<style>\n" + string(css) + "</style>\n"
-	}
-	if r.Component.CssFile != "" {
-		css, err := os.ReadFile(r.Component.CssFile)
-		if err != nil {
-			return nil, err
-		}
-		// @todo Use external (hashed) url in a <link>?
-		r.InlineCss += "<style>\n" + string(css) + "</style>\n"
-	}
 	r.Template, err = appHtml()
 	if err != nil {
 		return nil, err
@@ -96,7 +120,8 @@ func (r *Route) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 	}
-	result.Head += r.InlineCss
+	result.Head += "<style>\n" + r.InlineCss + "</style>\n"
+	result.Html += "\n<script>\n" + r.InlineScript + "</script>\n"
 	err = r.Template.Execute(w, result)
 	if err != nil {
 		writeError(w, err, r.debug)

@@ -30,8 +30,8 @@ func main() {
 	}
 
 	// @todo crawl routes folder
-	http.Handle("/", svelte.NewHandler("build/routes/index.js", *debug))
-	http.Handle("/about", svelte.NewHandler("build/routes/about.js", *debug))
+	http.Handle("/", svelte.NewHandler("build/routes/index", *debug))
+	http.Handle("/about", svelte.NewHandler("build/routes/about", *debug))
 
 	http.HandleFunc("/gc", func(w http.ResponseWriter, r *http.Request) {
 		runtime.GC()

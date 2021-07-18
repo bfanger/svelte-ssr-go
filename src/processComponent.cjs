@@ -17,18 +17,24 @@ module.exports = async function processComponent(filename) {
     folder,
     filename + ".svelte"
   );
-  const targetFile = path.join(
+  const targetServerFile = path.join(
     __dirname,
     "/../build",
     folder,
-    filename + ".js"
+    filename + ".server.js"
+  );
+  const targetClientFile = path.join(
+    __dirname,
+    "/../build",
+    folder,
+    filename + ".client.js"
   );
 
   await esbuild.build({
     entryPoints: [sourceFile],
     bundle: true,
     format: "esm",
-    outfile: targetFile,
+    outfile: targetServerFile,
     plugins: [
       aliasPlugin({
         $lib: path.resolve(__dirname, "../example/src/lib"),
@@ -46,18 +52,40 @@ module.exports = async function processComponent(filename) {
     logLevel: "info",
   });
 
-  const bundle = await fs.readFile(targetFile, "utf-8");
+  await iifeModule(targetServerFile);
 
-  const match = bundle.match(/export {\n  ([^}]+) as default\n};/);
-  if (!match) {
-    console.error("No default export detected");
-  } else {
-    const goModule =
-      "(function () {" +
-      bundle.replace(/export {[^}]+};/, "") +
-      "\n  return {\n    default: " +
-      match[1] +
-      ",\n  };\n})();";
-    await fs.writeFile(targetFile, goModule);
-  }
+  await esbuild.build({
+    entryPoints: [sourceFile],
+    bundle: true,
+    format: "esm",
+    target: "es2015",
+    outfile: targetClientFile,
+    minify: true,
+    plugins: [
+      aliasPlugin({
+        $lib: path.resolve(__dirname, "../example/src/lib"),
+      }),
+      sassPlugin(),
+      sveltePlugin({
+        preprocess: preprocess(),
+        compileOptions: {
+          generate: "dom",
+          hydratable: true,
+          css: false,
+        },
+      }),
+    ],
+    logLevel: "info",
+  });
+  await iifeModule(targetClientFile);
 };
+
+async function iifeModule(filename) {
+  const esmModule = await fs.readFile(filename, "utf-8");
+  let js = `(function () {\n${esmModule}})();`;
+  js = js.replace(`export {`, "return {");
+  js = js.replace(`;export{`, ";return{");
+  js = js.replace(/([^\n,{}]+) as default/, "default: $1");
+
+  await fs.writeFile(filename, js);
+}

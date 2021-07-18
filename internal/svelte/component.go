@@ -2,21 +2,21 @@ package svelte
 
 import (
 	"os"
-	"regexp"
 
 	"github.com/bfanger/svelte-ssr-go/internal/javascript"
 	"rogchap.com/v8go"
 )
 
 type Component struct {
-	js        *javascript.Runtime
-	CssFile   string
-	component *v8go.Object
-	render    *v8go.Function
+	js           *javascript.Runtime
+	CssFile      string
+	JsClientFile string
+	component    *v8go.Object
+	render       *v8go.Function
 }
 
 func NewComponent(js *javascript.Runtime, filename string) (*Component, error) {
-	result, err := js.ExecFile(filename)
+	result, err := js.ExecFile(filename + ".server.js")
 	if err != nil {
 		return nil, err
 	}
@@ -32,12 +32,17 @@ func NewComponent(js *javascript.Runtime, filename string) (*Component, error) {
 	if err != nil {
 		return nil, err
 	}
-	css := regexp.MustCompile(".js$").ReplaceAllString(filename, ".css")
+	css := filename + ".client.css"
 	stat, _ := os.Stat(css)
 	if stat == nil {
 		css = ""
 	}
-	return &Component{js: js, CssFile: css, component: defaultExport, render: render}, nil
+	client := filename + ".client.js"
+	stat, _ = os.Stat(client)
+	if stat == nil {
+		client = ""
+	}
+	return &Component{js: js, CssFile: css, JsClientFile: client, component: defaultExport, render: render}, nil
 }
 
 type Result struct {

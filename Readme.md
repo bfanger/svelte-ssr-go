@@ -16,6 +16,7 @@ yarn dev # starts go in watch mode
 # Implemented
 
 - Rendering a SSR component from Go
+- Hydrating page on the client
 
 # Todo
 
@@ -23,5 +24,4 @@ yarn dev # starts go in watch mode
 - sveltekit load
 - polyfills for browser api's
 - polyfill common node modules
-- hydrate
 - build --watch (or vite)
