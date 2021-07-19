@@ -4,8 +4,8 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "dev": "find . | entr -r go run cmd/server/server.go -d",
-    "dev:poc": "find . | entr -r go run cmd/poc/poc.go",
+    "dev": "find cmd internal | entr -r go run cmd/server/server.go -d",
+    "dev:poc": "find cmd internal | entr -r go run cmd/poc/poc.go",
     "build": "node src/build.cjs",
     "lint": "eslint src --max-warnings 0 --ext .cjs,.js",
     "format": "prettier --write src && eslint src --max-warnings 0 --ext .cjs,.js --fix"
@@ -15,7 +15,7 @@
     "svelte": "^3.38.3"
   },
   "devDependencies": {
-    "@sveltejs/kit": "^1.0.0-next.1",
+    "@sveltejs/kit": "^1.0.0-next.132",
     "esbuild-plugin-alias": "^0.1.2",
     "esbuild-plugin-sass": "^0.5.2",
     "esbuild-svelte": "^0.5.3",

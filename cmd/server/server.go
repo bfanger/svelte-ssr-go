@@ -9,6 +9,7 @@ import (
 
 	"flag"
 
+	"github.com/bfanger/svelte-ssr-go/cmd/server/todos"
 	"github.com/bfanger/svelte-ssr-go/internal/svelte"
 )
 
@@ -41,7 +42,10 @@ func main() {
 
 	})
 	http.Handle("/about", svelte.NewHandler("build/routes/about", *debug))
-	http.Handle("/todos/", svelte.NewHandler("build/routes/todos/index", *debug))
+	h := &todos.TodoHandler{Page: svelte.NewHandler("build/routes/todos/index", *debug)}
+
+	http.Handle("/todos.json", h)
+	http.Handle("/todos/", h)
 
 	http.HandleFunc("/gc", func(w http.ResponseWriter, r *http.Request) {
 		runtime.GC()
