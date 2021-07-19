@@ -1,5 +1,6 @@
 {
   "extends": ["plugin:prettier/recommended"],
+  "plugins": ["only-warn"],
   "parserOptions": {
     "ecmaVersion": "latest",
     "sourceType": "module"

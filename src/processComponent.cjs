@@ -3,42 +3,19 @@ const path = require("path");
 const esbuild = require("esbuild");
 const sveltePlugin = require("esbuild-svelte");
 const sassPlugin = require("esbuild-plugin-sass");
-const aliasPlugin = require("esbuild-plugin-alias");
 const preprocess = require("svelte-preprocess");
 
-module.exports = async function processComponent(filename) {
-  const folder = "routes";
-
-  const sourceFile = path.resolve(
-    __dirname,
-    "..",
-    "example",
-    "src",
-    folder,
-    filename + ".svelte"
-  );
-  const targetServerFile = path.join(
-    __dirname,
-    "/../build",
-    folder,
-    filename + ".server.js"
-  );
-  const targetClientFile = path.join(
-    __dirname,
-    "/../build",
-    folder,
-    filename + ".client.js"
-  );
+module.exports = async function processComponent(sourceFilename, targetDir) {
+  const filename = path.basename(sourceFilename).replace(/\.svelte$/, "");
+  const targetServerFile = path.join(targetDir, filename + ".server.js");
+  const targetClientFile = path.join(targetDir, filename + ".client.js");
 
   await esbuild.build({
-    entryPoints: [sourceFile],
+    entryPoints: [sourceFilename],
     bundle: true,
     format: "esm",
     outfile: targetServerFile,
     plugins: [
-      aliasPlugin({
-        $lib: path.resolve(__dirname, "../example/src/lib"),
-      }),
       sassPlugin(),
       sveltePlugin({
         preprocess: preprocess(),
@@ -49,22 +26,19 @@ module.exports = async function processComponent(filename) {
         },
       }),
     ],
-    logLevel: "info",
+    logLevel: "warning",
   });
 
   await iifeModule(targetServerFile);
 
   await esbuild.build({
-    entryPoints: [sourceFile],
+    entryPoints: [sourceFilename],
     bundle: true,
     format: "esm",
     target: "es2015",
     outfile: targetClientFile,
     minify: true,
     plugins: [
-      aliasPlugin({
-        $lib: path.resolve(__dirname, "../example/src/lib"),
-      }),
       sassPlugin(),
       sveltePlugin({
         preprocess: preprocess(),
@@ -75,17 +49,27 @@ module.exports = async function processComponent(filename) {
         },
       }),
     ],
-    logLevel: "info",
+    logLevel: "warning",
   });
   await iifeModule(targetClientFile);
 };
 
 async function iifeModule(filename) {
   const esmModule = await fs.readFile(filename, "utf-8");
-  let js = `(function () {\n${esmModule}})();`;
-  js = js.replace(`export {`, "return {");
-  js = js.replace(`;export{`, ";return{");
-  js = js.replace(/([^\n,{}]+) as default/, "default: $1");
+  const regex = /export([ ]?{)([^}]+)}/;
+  const match = esmModule.match(regex);
+  if (!match) {
+    console.warn("no export block detected in " + filename);
+    return;
+  }
+  const converted =
+    "return" +
+    match[1] +
+    match[2].replace(/([^\n,{} ]+) as ([^;,\n }]+)/g, "$2: $1") +
+    "}";
 
-  await fs.writeFile(filename, js);
+  await fs.writeFile(
+    filename,
+    `(function () {\n${esmModule.replace(regex, converted)}})();`
+  );
 }

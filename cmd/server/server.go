@@ -30,8 +30,18 @@ func main() {
 	}
 
 	// @todo crawl routes folder
-	http.Handle("/", svelte.NewHandler("build/routes/index", *debug))
+	home := svelte.NewHandler("build/routes/index", *debug)
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" {
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprint(w, "404 Not found")
+			return
+		}
+		home.ServeHTTP(w, r)
+
+	})
 	http.Handle("/about", svelte.NewHandler("build/routes/about", *debug))
+	http.Handle("/todos/", svelte.NewHandler("build/routes/todos/index", *debug))
 
 	http.HandleFunc("/gc", func(w http.ResponseWriter, r *http.Request) {
 		runtime.GC()

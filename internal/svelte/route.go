@@ -3,6 +3,7 @@ package svelte
 import (
 	"net/http"
 	"os"
+	"path"
 	"regexp"
 	"text/template"
 
@@ -47,6 +48,11 @@ func NewRoute(js *javascript.Runtime, filename string, debug bool) (*Route, erro
 
 	layoutPath := regexp.MustCompile("[^/]+$").ReplaceAllString(filename, "__layout")
 	stat, _ := os.Stat(layoutPath + ".server.js")
+	if stat == nil {
+		// @todo Traverse folders inside build/routes
+		layoutPath = path.Dir(path.Dir(layoutPath)) + "/__layout"
+		stat, _ = os.Stat(layoutPath + ".server.js")
+	}
 	if stat != nil {
 		r.Layout, err = NewComponent(js, layoutPath)
 		if err != nil {

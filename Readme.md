@@ -20,6 +20,7 @@ yarn dev # starts go in watch mode
 
 # Todo
 
+- Nested layout + resets
 - sveltekit routing
 - sveltekit load
 - polyfills for browser api's

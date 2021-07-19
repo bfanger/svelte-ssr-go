@@ -7,20 +7,24 @@
     "dev": "find . | entr -r go run cmd/server/server.go -d",
     "dev:poc": "find . | entr -r go run cmd/poc/poc.go",
     "build": "node src/build.cjs",
-    "lint": "eslint src --max-warnings 0 --ext .cjs,.js"
+    "lint": "eslint src --max-warnings 0 --ext .cjs,.js",
+    "format": "prettier --write src && eslint src --max-warnings 0 --ext .cjs,.js --fix"
   },
   "dependencies": {
     "esbuild": "^0.12.15",
     "svelte": "^3.38.3"
   },
   "devDependencies": {
+    "@sveltejs/kit": "^1.0.0-next.1",
     "esbuild-plugin-alias": "^0.1.2",
     "esbuild-plugin-sass": "^0.5.2",
     "esbuild-svelte": "^0.5.3",
     "eslint": "^7.30.0",
     "eslint-config-prettier": "^8.3.0",
+    "eslint-plugin-only-warn": "^1.0.2",
     "eslint-plugin-prettier": "^3.4.0",
     "prettier": "^2.3.2",
+    "prettier-plugin-svelte": "^2.3.1",
     "sass": "^1.35.2",
     "svelte-preprocess": "^4.7.4",
     "typescript": "^4.3.5"
