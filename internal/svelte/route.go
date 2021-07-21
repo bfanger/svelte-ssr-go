@@ -5,6 +5,7 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"strings"
 	"text/template"
 
 	"github.com/bfanger/svelte-ssr-go/internal/javascript"
@@ -14,7 +15,7 @@ import (
 type Route struct {
 	js            *javascript.Runtime
 	debug         bool
-	InlineCss     string
+	InlineCSS     string
 	InlineScript  string
 	Template      *template.Template
 	Component     *Component
@@ -29,13 +30,13 @@ func NewRoute(js *javascript.Runtime, filename string, debug bool) (*Route, erro
 	if err != nil {
 		return nil, err
 	}
-	if r.Component.CssFile != "" {
+	if r.Component.CSSFile != "" {
 		// @todo Use external (hashed) url in a <link>?
-		css, err := os.ReadFile(r.Component.CssFile)
+		css, err := os.ReadFile(r.Component.CSSFile)
 		if err != nil {
 			return nil, err
 		}
-		r.InlineCss = string(css)
+		r.InlineCSS = string(css)
 	}
 	if r.Component.JsClientFile != "" {
 		js, err := os.ReadFile(r.Component.JsClientFile)
@@ -47,11 +48,11 @@ func NewRoute(js *javascript.Runtime, filename string, debug bool) (*Route, erro
 	}
 
 	layoutPath := regexp.MustCompile("[^/]+$").ReplaceAllString(filename, "__layout")
-	stat, _ := os.Stat(layoutPath + ".server.js")
+	stat, _ := os.Stat("build/server/" + layoutPath + ".js")
 	if stat == nil {
 		// @todo Traverse folders inside build/routes
-		layoutPath = path.Dir(path.Dir(layoutPath)) + "/__layout"
-		stat, _ = os.Stat(layoutPath + ".server.js")
+		layoutPath = strings.TrimLeft(path.Dir(path.Dir(layoutPath))+"/__layout", "./")
+		stat, _ = os.Stat("build/server/" + layoutPath + ".js")
 	}
 	if stat != nil {
 		r.Layout, err = NewComponent(js, layoutPath)
@@ -76,13 +77,13 @@ func NewRoute(js *javascript.Runtime, filename string, debug bool) (*Route, erro
 			return nil, err
 		}
 		definedSlots.Set("__go_Component_render", r.Component.render)
-		if r.Layout.CssFile != "" {
-			css, err := os.ReadFile(r.Layout.CssFile)
+		if r.Layout.CSSFile != "" {
+			css, err := os.ReadFile(r.Layout.CSSFile)
 			if err != nil {
 				return nil, err
 			}
 			// @todo Use external (hashed) url in a <link>?
-			r.InlineCss += string(css)
+			r.InlineCSS += string(css)
 		}
 		if r.Layout.JsClientFile != "" {
 			js, err := os.ReadFile(r.Layout.JsClientFile)
@@ -103,13 +104,13 @@ var app = new layoutModule.default({ target: document.getElementById("svelte"), 
 		}
 	}
 
-	r.Template, err = appHtml()
+	r.Template, err = appHTML()
 	if err != nil {
 		return nil, err
 	}
 	return r, nil
 }
-func (r *Route) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+func (r *Route) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 	var result *Result
 	var err error
@@ -126,15 +127,18 @@ func (r *Route) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 	}
-	result.Head += "<style>\n" + r.InlineCss + "</style>\n"
+	result.Head += "<style>\n" + r.InlineCSS + "</style>\n"
 	result.Html += "\n<script>\n" + r.InlineScript + "</script>\n"
+	if r.debug {
+		result.Html += "<script src=\"http://localhost:35729/livereload.js\"></script>\n"
+	}
 	err = r.Template.Execute(w, result)
 	if err != nil {
 		writeError(w, err, r.debug)
 	}
 }
 
-func appHtml() (*template.Template, error) {
+func appHTML() (*template.Template, error) {
 	app, err := os.ReadFile("example/src/app.html")
 	if err != nil {
 		return nil, err

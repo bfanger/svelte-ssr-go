@@ -25,4 +25,3 @@ yarn dev # starts go in watch mode
 - sveltekit load
 - polyfills for browser api's
 - polyfill common node modules
-- build --watch (or vite)

@@ -1,21 +1,30 @@
 {
-  "name": "go-svelte",
+  "name": "svelte-ssr-go",
   "version": "1.0.0",
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "dev": "find cmd internal | entr -r go run cmd/server/server.go -d",
-    "dev:poc": "find cmd internal | entr -r go run cmd/poc/poc.go",
-    "build": "node src/build.cjs",
-    "lint": "eslint src --max-warnings 0 --ext .cjs,.js",
-    "format": "prettier --write src && eslint src --max-warnings 0 --ext .cjs,.js --fix"
+    "dev": "rimraf build && gulp build && concurrently npm:dev:js npm:dev:go",
+    "dev:go": "find cmd internal | entr -r go run cmd/server/server.go -d",
+    "dev:js": "gulp watch",
+    "build": "concurrently npm:build:js npm:build:go",
+    "build:go": "go build -v -o svelte-server ./cmd/server/",
+    "build:js": "rimraf build && gulp build",
+    "lint": "eslint *.ts example --max-warnings 0 --ext .cjs,.js,.ts",
+    "format": "prettier --write *.ts example && eslint *.ts example --max-warnings 0 --ext .cjs,.js,.ts --fix",
+    "poc:watch": "find cmd internal | entr -r go run cmd/poc/poc.go"
   },
   "dependencies": {
     "esbuild": "^0.12.15",
+    "gulp-livereload": "^4.0.2",
     "svelte": "^3.38.3"
   },
   "devDependencies": {
     "@sveltejs/kit": "^1.0.0-next.132",
+    "@types/gulp": "^4.0.9",
+    "@typescript-eslint/eslint-plugin": "^4.28.4",
+    "@typescript-eslint/parser": "^4.28.4",
+    "concurrently": "^6.2.0",
     "esbuild-plugin-alias": "^0.1.2",
     "esbuild-plugin-sass": "^0.5.2",
     "esbuild-svelte": "^0.5.3",
@@ -23,10 +32,13 @@
     "eslint-config-prettier": "^8.3.0",
     "eslint-plugin-only-warn": "^1.0.2",
     "eslint-plugin-prettier": "^3.4.0",
+    "gulp": "^4.0.2",
+    "gulp-esbuild": "^0.8.4",
     "prettier": "^2.3.2",
     "prettier-plugin-svelte": "^2.3.1",
     "sass": "^1.35.2",
     "svelte-preprocess": "^4.7.4",
+    "ts-node": "^10.1.0",
     "typescript": "^4.3.5"
   }
 }

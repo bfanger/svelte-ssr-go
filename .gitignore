@@ -1,3 +1,4 @@
 /build
 /node_modules
 /src/**/*.svelte.js
+/svelte-server

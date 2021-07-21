@@ -9,14 +9,14 @@ import (
 
 type Component struct {
 	js           *javascript.Runtime
-	CssFile      string
+	CSSFile      string
 	JsClientFile string
 	component    *v8go.Object
 	render       *v8go.Function
 }
 
 func NewComponent(js *javascript.Runtime, filename string) (*Component, error) {
-	result, err := js.ExecFile(filename + ".server.js")
+	result, err := js.ExecFile("build/server/" + filename + ".js")
 	if err != nil {
 		return nil, err
 	}
@@ -32,17 +32,17 @@ func NewComponent(js *javascript.Runtime, filename string) (*Component, error) {
 	if err != nil {
 		return nil, err
 	}
-	css := filename + ".client.css"
+	css := "build/client/" + filename + ".css"
 	stat, _ := os.Stat(css)
 	if stat == nil {
 		css = ""
 	}
-	client := filename + ".client.js"
+	client := "build/client/" + filename + ".js"
 	stat, _ = os.Stat(client)
 	if stat == nil {
 		client = ""
 	}
-	return &Component{js: js, CssFile: css, JsClientFile: client, component: defaultExport, render: render}, nil
+	return &Component{js: js, CSSFile: css, JsClientFile: client, component: defaultExport, render: render}, nil
 }
 
 type Result struct {
