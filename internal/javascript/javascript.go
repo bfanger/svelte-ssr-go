@@ -8,9 +8,8 @@ import (
 )
 
 type Runtime struct {
-	Isolate     *v8go.Isolate
-	Context     *v8go.Context
-	EmptyObject *v8go.Object
+	Isolate *v8go.Isolate
+	Context *v8go.Context
 }
 
 func New() (*Runtime, error) {
@@ -22,13 +21,7 @@ func New() (*Runtime, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "creating context failed")
 	}
-	empty, err := ctx.RunScript("(function () { return {} })();", "javascript.go")
-	if err != nil {
-		return nil, errors.Wrap(err, "creating empty object failed")
-	}
-	emptyObj, err := empty.AsObject()
-
-	return &Runtime{Isolate: iso, Context: ctx, EmptyObject: emptyObj}, nil
+	return &Runtime{Isolate: iso, Context: ctx}, nil
 }
 
 func (r *Runtime) Dispose() {
@@ -50,6 +43,14 @@ func (r *Runtime) Exec(code string, origin string) (*v8go.Value, error) {
 		return nil, err
 	}
 	return val, nil
+}
+
+func (r *Runtime) NewObject() (*v8go.Object, error) {
+	empty, err := r.Context.RunScript("({});", "javascript.go")
+	if err != nil {
+		return nil, errors.Wrap(err, "creating empty object failed")
+	}
+	return empty.AsObject()
 }
 
 // 	printfn, err := v8go.NewFunctionTemplate(iso, func(info *v8go.FunctionCallbackInfo) *v8go.Value {

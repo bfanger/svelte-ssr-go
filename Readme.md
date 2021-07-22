@@ -23,5 +23,6 @@ yarn dev # starts go in watch mode
 - Nested layout + resets
 - sveltekit routing
 - sveltekit load
-- polyfills for browser api's
+- polyfill browser api's
 - polyfill common node modules
+- polyfill sveltekit api's

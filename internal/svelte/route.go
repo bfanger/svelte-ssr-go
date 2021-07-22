@@ -115,7 +115,7 @@ func (r *Route) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 	var result *Result
 	var err error
 	if r.Layout != nil {
-		result, err = r.Layout.Render(r.js.EmptyObject, r.LayoutOptions)
+		result, err = r.Layout.Render(r.Layout.DefaultProps, r.LayoutOptions)
 		if err != nil {
 			writeError(w, err, r.debug)
 			return
@@ -128,9 +128,9 @@ func (r *Route) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 		}
 	}
 	result.Head += "<style>\n" + r.InlineCSS + "</style>\n"
-	result.Html += "\n<script>\n" + r.InlineScript + "</script>\n"
+	result.HTML += "\n<script>\n" + r.InlineScript + "</script>\n"
 	if r.debug {
-		result.Html += "<script src=\"http://localhost:35729/livereload.js\"></script>\n"
+		result.HTML += "<script src=\"http://localhost:35729/livereload.js\"></script>\n"
 	}
 	err = r.Template.Execute(w, result)
 	if err != nil {
@@ -145,7 +145,7 @@ func appHTML() (*template.Template, error) {
 	}
 	html := string(app)
 	html = regexp.MustCompile("%svelte.head%").ReplaceAllString(html, "{{ .Head }}")
-	html = regexp.MustCompile("%svelte.body%").ReplaceAllString(html, "{{ .Html }}")
+	html = regexp.MustCompile("%svelte.body%").ReplaceAllString(html, "{{ .HTML }}")
 	t, err := template.New("app.html").Parse(html)
 	if err != nil {
 		return nil, err

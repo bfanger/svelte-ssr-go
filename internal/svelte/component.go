@@ -9,6 +9,7 @@ import (
 
 type Component struct {
 	js           *javascript.Runtime
+	DefaultProps *v8go.Object
 	CSSFile      string
 	JsClientFile string
 	component    *v8go.Object
@@ -42,13 +43,17 @@ func NewComponent(js *javascript.Runtime, filename string) (*Component, error) {
 	if stat == nil {
 		client = ""
 	}
-	return &Component{js: js, CSSFile: css, JsClientFile: client, component: defaultExport, render: render}, nil
+	props, err := js.NewObject()
+	if err != nil {
+		return nil, err
+	}
+	return &Component{js: js, DefaultProps: props, CSSFile: css, JsClientFile: client, component: defaultExport, render: render}, nil
 }
 
 type Result struct {
-	Html string
+	HTML string
 	Head string
-	Css  string
+	CSS  string
 }
 
 func (c Component) Render(args ...v8go.Valuer) (*Result, error) {
@@ -88,7 +93,7 @@ func (c Component) Render(args ...v8go.Valuer) (*Result, error) {
 	}
 	return &Result{
 		Head: head.String(),
-		Css:  cssCode.String(),
-		Html: html.String(),
+		CSS:  cssCode.String(),
+		HTML: html.String(),
 	}, nil
 }
