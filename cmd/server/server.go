@@ -43,6 +43,7 @@ func main() {
 	})
 	http.Handle("/about", svelte.NewHandler("about", *debug))
 	h := &todos.TodoHandler{Page: svelte.NewHandler("todos/index", *debug)}
+	h.Add("Test123")
 
 	http.Handle("/todos.json", h)
 	http.Handle("/todos/", h)

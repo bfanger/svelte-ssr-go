@@ -1,6 +1,8 @@
 package svelte
 
 import (
+	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"path"
@@ -59,6 +61,7 @@ func NewRoute(js *javascript.Runtime, filename string, debug bool) (*Route, erro
 		if err != nil {
 			return nil, err
 		}
+		// @todo props from load
 		slots, err := r.Component.js.Context.RunScript(`
 (function () {
 	return {
@@ -110,18 +113,63 @@ var app = new layoutModule.default({ target: document.getElementById("svelte"), 
 	}
 	return r, nil
 }
+
+func (r *Route) Load(c *Component) *Payload {
+	p := &Payload{Status: http.StatusOK, Props: c.DefaultProps}
+	if c.Load == nil {
+		return p
+	}
+	context, err := c.js.NewObject()
+	if err != nil {
+		return &Payload{Status: http.StatusInternalServerError, Err: err}
+	}
+	context.Set("fetch", c.js.Fetch)
+	val, err := c.Load.Call(context)
+	if err != nil {
+		return &Payload{Status: http.StatusInternalServerError, Err: err}
+	}
+	promise, err := val.AsPromise()
+	if err != nil {
+		return &Payload{Status: http.StatusInternalServerError, Err: err}
+	}
+	state, value := javascript.WaitFor(promise)
+	props, err := value.AsObject()
+	if err != nil {
+		return &Payload{Status: http.StatusInternalServerError, Err: err}
+	}
+	if state == v8go.Rejected {
+		message := "promise rejected"
+		if err == nil {
+			jsMessage, err := props.Get("message")
+			fmt.Println(err)
+			if err == nil && jsMessage.IsString() {
+				message = jsMessage.String()
+			}
+		}
+		return &Payload{Status: http.StatusInternalServerError, Props: c.DefaultProps, Err: errors.New(message)}
+	}
+
+	return &Payload{Status: http.StatusOK, Props: props}
+}
+
 func (r *Route) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
+	p := r.Load(r.Component)
+	if p.Err != nil {
+		writeError(w, p.Err, r.debug)
+		return
+	}
 	w.Header().Set("Content-Type", "text/html")
 	var result *Result
 	var err error
 	if r.Layout != nil {
+		// @todo Use the result of the Load data
 		result, err = r.Layout.Render(r.Layout.DefaultProps, r.LayoutOptions)
 		if err != nil {
 			writeError(w, err, r.debug)
 			return
 		}
 	} else {
-		result, err = r.Component.Render()
+		result, err = r.Component.Render(p.Props)
 		if err != nil {
 			writeError(w, err, r.debug)
 			return
@@ -151,4 +199,18 @@ func appHTML() (*template.Template, error) {
 		return nil, err
 	}
 	return t, nil
+}
+
+type Payload struct {
+	Props  *v8go.Object
+	Err    error
+	Status int
+}
+
+func (p *Payload) PropsAsJson(ctx *v8go.Context) string {
+	json, err := v8go.JSONStringify(ctx, p.Props)
+	if err != nil {
+		return "{}"
+	}
+	return json
 }

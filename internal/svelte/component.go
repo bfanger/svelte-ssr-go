@@ -14,6 +14,7 @@ type Component struct {
 	JsClientFile string
 	component    *v8go.Object
 	render       *v8go.Function
+	Load         *v8go.Function
 }
 
 func NewComponent(js *javascript.Runtime, filename string) (*Component, error) {
@@ -33,6 +34,7 @@ func NewComponent(js *javascript.Runtime, filename string) (*Component, error) {
 	if err != nil {
 		return nil, err
 	}
+	load, _ := javascript.PropAsFunction(exports, "load")
 	css := "build/client/" + filename + ".css"
 	stat, _ := os.Stat(css)
 	if stat == nil {
@@ -47,16 +49,25 @@ func NewComponent(js *javascript.Runtime, filename string) (*Component, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Component{js: js, DefaultProps: props, CSSFile: css, JsClientFile: client, component: defaultExport, render: render}, nil
+	return &Component{
+		js:           js,
+		DefaultProps: props,
+		CSSFile:      css,
+		JsClientFile: client,
+		component:    defaultExport,
+		render:       render,
+		Load:         load,
+	}, nil
 }
 
 type Result struct {
-	HTML string
 	Head string
 	CSS  string
+	HTML string
 }
 
-func (c Component) Render(args ...v8go.Valuer) (*Result, error) {
+func (c *Component) Render(args ...v8go.Valuer) (*Result, error) {
+	// @todo timeout?
 	result, err := c.render.Call(args...)
 	if err != nil {
 		return nil, err
